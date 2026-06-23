@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "One row per customer_id (per order). Use customer_unique_id to count real customers."
+    columns:
+      - name: customer_id
+        description: "Primary key — unique per order"
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_unique_id
+        description: "Real customer identifier — use for repurchase analysis"
+        tests:
+          - not_null
+
+  - name: dim_products
+    description: "One row per product. Category translated to English via coalesce."
+    columns:
+      - name: product_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_sellers
+    description: "One row per seller, enriched with geolocation."
+    columns:
+      - name: seller_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_order_items
+    description: "One row per order line. Finest grain in the star schema."
+    columns:
+      - name: order_id
+        description: "Foreign key to fct_orders — repeats on purpose at this grain"
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Foreign key to dim_products"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: "{{ ref('dim_products') }}"
+                field: product_id
+
+      - name: seller_id
+        description: "Foreign key to dim_sellers"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: "{{ ref('dim_sellers') }}"
+                field: seller_id
+
+  - name: fct_orders
+    description: "One row per order. Aggregates items and payments before joining."
+    columns:
+      - name: order_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Foreign key to dim_customers via customer_unique_id"
+        tests:
+          - not_null
